@@ -17,6 +17,8 @@ import (
 type Github struct {
 	RepositoryURL string // Repository URL, example github.com/mouuff/go-rocket-update
 	ArchiveName   string // Archive name (the zip/tar.gz you upload for a release on github), example: binaries.zip
+	IsArchive     bool   // Is the release an archive or a single file
+	AccessToken   string // Github access token (optional), please make sure to use a token with the least permissions possible
 
 	tmpDir             string   // temporary directory this is used internally
 	decompressProvider Provider // provider used to decompress the downloaded archive
@@ -91,10 +93,25 @@ func (c *Github) getTags() (tags []githubTag, err error) {
 	if err != nil {
 		return
 	}
-	resp, err := http.Get(tagsURL)
-	if err != nil {
-		return
+
+	var resp *http.Response
+	if len(c.AccessToken) > 0 {
+		req, err := http.NewRequest("GET", tagsURL, nil)
+		if err != nil {
+			return nil, err
+		}
+		req.Header.Set("Authorization", "token "+c.AccessToken)
+		resp, err = http.DefaultClient.Do(req)
+		if err != nil {
+			return nil, err
+		}
+	} else {
+		resp, err = http.Get(tagsURL)
+		if err != nil {
+			return nil, err
+		}
 	}
+
 	defer resp.Body.Close()
 	err = json.NewDecoder(resp.Body).Decode(&tags)
 	if err != nil {
@@ -109,10 +126,24 @@ func (c *Github) Open() (err error) {
 	if err != nil {
 		return
 	}
-	resp, err := http.Get(archiveURL)
-	if err != nil {
-		return
+	var resp *http.Response
+	if len(c.AccessToken) > 0 {
+		req, err := http.NewRequest("GET", archiveURL, nil)
+		if err != nil {
+			return err
+		}
+		req.Header.Set("Authorization", "token "+c.AccessToken)
+		resp, err = http.DefaultClient.Do(req)
+		if err != nil {
+			return err
+		}
+	} else {
+		resp, err = http.Get(archiveURL)
+		if err != nil {
+			return err
+		}
 	}
+
 	defer resp.Body.Close()
 
 	c.tmpDir, err = fileio.TempDir()
@@ -130,11 +161,16 @@ func (c *Github) Open() (err error) {
 	if err != nil {
 		return
 	}
-	c.decompressProvider, err = Decompress(c.archivePath)
-	if err != nil {
-		return nil
+	// If the release is an archive then we decompress it
+	if c.IsArchive {
+		c.decompressProvider, err = Decompress(c.archivePath)
+		if err != nil {
+			return nil
+		}
+		return c.decompressProvider.Open()
 	}
-	return c.decompressProvider.Open()
+
+	return nil
 }
 
 // Close closes the provider

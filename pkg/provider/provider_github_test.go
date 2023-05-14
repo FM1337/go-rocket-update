@@ -13,6 +13,7 @@ func TestProviderGithub(t *testing.T) {
 	p := &provider.Github{
 		RepositoryURL: "github.com/mouuff/go-rocket-update-example",
 		ArchiveName:   fmt.Sprintf("binaries_%s.zip", runtime.GOOS),
+		IsArchive:     true,
 	}
 	if err := p.Open(); err != nil {
 		t.Fatal(err)
@@ -24,9 +25,24 @@ func TestProviderGithub(t *testing.T) {
 		t.Fatal(err)
 	}
 
+	// providerWithJustABinary := &provider.Github{
+	// 	RepositoryURL: "github.com/mouuff/go-rocket-update-example",
+	// 	ArchiveName:   fmt.Sprintf("binaries_%s", runtime.GOOS),
+	// }
+	// if err := p.Open(); err != nil {
+	// 	t.Fatal(err)
+	// }
+	// defer p.Close()
+
+	// err = ProviderTestWalkAndRetrieve(providerWithJustABinary)
+	// if err != nil {
+	// 	t.Fatal(err)
+	// }
+
 	badProvider := &provider.Github{
 		RepositoryURL: "github.com/XXXXXXXXXXXXXXXXX/XXXXXXXXXXXXXXXXXXXXX",
 		ArchiveName:   fmt.Sprintf("binaries_%s.zip", runtime.GOOS),
+		IsArchive:     true,
 	}
 	err = ProviderTestUnavailable(badProvider)
 	if err != nil {
@@ -35,6 +51,7 @@ func TestProviderGithub(t *testing.T) {
 	badProvider = &provider.Github{
 		RepositoryURL: "githubxxx.com/mouuff/go-rocket-update-example",
 		ArchiveName:   fmt.Sprintf("binaries_%s.zip", runtime.GOOS),
+		IsArchive:     true,
 	}
 	err = ProviderTestUnavailable(badProvider)
 	if err != nil {
@@ -44,6 +61,7 @@ func TestProviderGithub(t *testing.T) {
 	badProvider = &provider.Github{
 		RepositoryURL: "https://github.com/mouuff/MouBot",
 		ArchiveName:   fmt.Sprintf("binaries_%s.zip", runtime.GOOS),
+		IsArchive:     true,
 	}
 	_, err = badProvider.GetLatestVersion()
 	if err == nil || !strings.Contains(err.Error(), "tags") {
